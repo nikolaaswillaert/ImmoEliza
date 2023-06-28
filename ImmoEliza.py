@@ -61,7 +61,6 @@ def scrape_house(url):
     regex = r"window.classified = (\{.*\})"
     script = house_page.find('div',attrs={"id":"main-container"}).script.text
     script = re.findall(regex, script)
-    print(url)
     try:
         script = json.loads(script[0])
     except:

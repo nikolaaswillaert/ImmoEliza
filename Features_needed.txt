@@ -1,0 +1,55 @@
+- Locality 
+==> IN SCRIPT > script['property']['location']['locality']
+
+- Type of property (House/apartment)
+==> script['property']['type']
+
+- Subtype of property (Bungalow, Chalet, Mansion, ...)
+==> script['property']['subtype']
+
+- Price
+==> script['price']['mainValue']
+
+- Type of sale (Exclusion of life sales)
+!!!! script['transaction']['subtype'] ??
+
+- Number of rooms
+==> script['property']['bedroomCount']
+
+- Living Area
+==> script['property']['netHabitableSurface']
+
+- Fully equipped kitchen (Yes/No)
+==> script['property']['kitchen']['type']
+# NOT INSTALLED / INSTALLED
+
+- Furnished (Yes/No)
+==> script['transaction']['sale']['isFurnished']
+
+- Open fire (Yes/No)
+==> script['property']['fireplaceCount']
+
+- Terrace (Yes/No)
+==> script['property']['hasTerrace']
+  - If yes: Area
+==> script['property']['terraceSurface']
+
+- Garden (Yes/No)
+==> cript['property']['hasGarden']
+  - If yes: Area
+==> script['property']['gardenSurface']
+
+- Surface of the land
+==> script['property']['land']['surface']
+
+- Surface area of the plot of land
+
+
+- Number of facades
+==> script['property']['building']['facadeCount']
+
+- Swimming pool (Yes/No)
+script['property']['hasSwimmingPool']
+
+- State of the building (New, to be renovated, ...)
+script['property']['building']['condition']

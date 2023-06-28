@@ -1,49 +1,184 @@
 import requests
-from bs4 import BeautifulSoup as soup
+from bs4 import BeautifulSoup
 import re
+import json
+from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor, as_completed
+import time
+import pandas as pd
+import threading
 
-# Get list of houses for sale
-url = "https://www.immoweb.be/en/search/house/for-sale"
-response = requests.get(url)
-# Make a soup
-overview_page = soup(response.text, 'html.parser')
-# Initialize an empty list
-houses_links = []
-# Find individual links
-for element in overview_page.find_all("a", attrs={"aria-label": re.compile("House for sale*?")}):
-    houses_links.append(element.get('href'))
-
-# Test with 1 house
-#house_page = requests.get(houses_links[0]).text
-
-#https://www.immoweb.be/en/classified/house/for-sale/libin/6890/10657263     
-#    
-
-url = "https://www.immoweb.be/en/classified/house/for-sale/libin/6890/10657263"
-house_page = requests.get(url)
-house_page = soup(house_page.text, 'html.parser')
-rows = house_page.find_all("tr", attrs={"class": "classified-table__row"})
-for row in rows:
-    # Get keys to build dict
-    header = row.find("th", attrs={"class": "classified-table__header"})
-    header = re.sub("\<.*row\">", "", str(header))
-    header = re.sub("\<\/th>", "", str(header))
-    header = re.sub("( ){2,}", "", str(header))
-    header = re.sub("\\n", "", str(header))
-
-    # Get values
-    data = row.find("td", attrs={"class": "classified-table__data"})
-    data = re.sub("\<.*data\">", "", str(data))
-    data = re.sub("\<\/td>", "", str(data))
-    data = re.sub("( ){2,}", "", str(data))
-    data = re.sub("\\n", "", str(data))
-    data = re.sub("\<span.+span>", "", str(data))
+# Function to scrape URLs
+def scrape_urls(page_num):
+    base_url = f"https://www.immoweb.be/en/search/house/for-sale?countries=BE&page={page_num}&orderBy=relevance"
+    r = requests.get(base_url)
+    soup = BeautifulSoup(r.content, "html.parser")
     
-    house_dict = {}
-    #house_dict['locality'] = 
+    urls = []
+    for elem in soup.find_all("a", attrs={"class": "card__title-link"}):
+        urls.append(elem.get('href'))
+        
+    # Save URLs to file - full_list.txt (local storage)
+    with open("full_list.txt", "a") as f:
+        for url in urls:
+            f.write(url + '\n')
+    return urls
+
+def thread_scraping():
+    full_list_url = []
+    num_pages = 333
+
+    # Create a list to store threads
+    threads = []
+    start_time = time.time()  # Start timer
+    print("Scraping URLs...")
+
+    # Create and start threads
+    for i in range(1, num_pages + 1):
+        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+        threads.append(t)
+        t.start()
+
+    # Wait for all threads to complete and then join
+    [t.join() for t in threads]
+
+    end_time = time.time()  # Stop timer
+    execution_time = end_time - start_time
+
+    print("Scraping completed!")
+    print("Total URLs scraped:", len(full_list_url))
+    print("Total time spent scraping:", execution_time, "seconds")
+    return full_list_url
+
+def scrape_house(url):
+    """Scrapes all the info from a house listing"""
+
+    # Get the house listing and make a soup
+    house_page = requests.get(url)
+    house_page = BeautifulSoup(house_page.text, 'html.parser')
+    final_dictionary = {}
+
+    # Get the hidden info from the java script
+    regex = r"window.classified = (\{.*\})"
+    script = house_page.find('div',attrs={"id":"main-container"}).script.text
+    script = re.findall(regex, script)
+    try:
+        script = json.loads(script[0])
+    except:
+        return {}
+
+    final_dictionary = {}
+        #Locality
+    try:
+        final_dictionary['locality'] = script['property']['location']['locality']
+    except:
+        final_dictionary['locality'] = 'UNKNOWN'
+    #type of property
+    try:
+        final_dictionary['type of property'] = script['property']['type']
+    except:
+        final_dictionary['type of property'] = 'UNKNOWN'
+    #subtype of property
+    try:
+        final_dictionary['subtype of property'] = script['property']['subtype']
+    except:
+        final_dictionary['subtype of property'] = 'UNKNOWN'
+    #price
+    try:
+        final_dictionary['price'] = script['price']['mainValue']
+    except:
+        final_dictionary['price'] = 'UNKNOWN'
+    #- Number of rooms
+    try:
+        final_dictionary['number_rooms'] = script['property']['bedroomCount']
+    except:
+        final_dictionary['number_rooms'] = 'UNKNOWN'
     
-    classified_script = house_page.find("div", attrs={"id": "container-main-content"}).script.text
-    dict = r"window.classified = \{.+\}"
-    print(dict)
-    if header == "Tenement building": 
-        break
+    # living area
+    try:
+        final_dictionary['living_area'] = script['property']['netHabitableSurface']
+    except:
+        final_dictionary['living_area'] = 'UNKNOWN'
+    # Fully equipped kitchen (Yes/No)
+    try:
+        final_dictionary['kitchen'] = script['property']['kitchen']['type']
+    except:
+        final_dictionary['kitchen'] = 0
+
+    # NOT INSTALLED / INSTALLED 
+    # Furnished (Yes/No)
+    try:
+        final_dictionary['furnished'] = script['transaction']['sale']['isFurnished']
+    except:
+        final_dictionary['furnished'] = 'UNKNOWN'
+    # Open fire (Yes/No)
+    try:
+        final_dictionary['fireplace'] = script['property']['fireplaceCount']
+    except:
+        final_dictionary['fireplace'] = 0
+
+    # Terrace (Yes/No)
+    try:
+        final_dictionary['terrace'] = script['property']['hasTerrace']
+    except:
+        final_dictionary['terrace'] = 0
+    # If yes: Area
+    try:
+        final_dictionary['terrace_area'] = script['property']['terraceSurface']
+    except: 
+        final_dictionary['terrace_area'] = 0
+    # Garden
+    try:
+        final_dictionary['garden'] = script['property']['hasGarden']
+    except:
+        final_dictionary['garden'] = 0
+    #- If yes: Area
+    try:
+        final_dictionary['garden_area'] = script['property']['gardenSurface']
+    except:
+        final_dictionary['garden_area'] = 0
+    # Surface of the land
+    try: 
+        final_dictionary['surface_land'] = script['property']['land']['surface']
+    except:
+        final_dictionary['surface_land'] = "UNKNOWN"
+    # Surface area of the plot of land - TO ASK
+    # Number of facades
+    try:
+        final_dictionary['number_facades'] = script['property']['building']['facadeCount']
+    except:
+        final_dictionary['number_facades'] = "UNKNOWN"
+    # Swimming pool (Yes/No)
+    try:
+        final_dictionary['swimming_pool'] =  script['property']['hasSwimmingPool']
+    except:
+        final_dictionary['swimming_pool'] = 0
+    # State of the building (New, to be renovated, ...)
+    try:
+        final_dictionary['building_state'] = script['property']['building']['condition']
+    except:
+        final_dictionary['building_state'] = 'UNKNOWN'
+
+    return final_dictionary
+
+# CHANGE  THIS TO LOOP OVER ALL THE URLS IN URL LINKS LIST OR TXT FILE
+# CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
+def create_dataframe():
+    houses_links = []
+    houses_links = thread_scraping()
+    print("")
+    print("Scraping individual pages...")
+    start_time = time.time()  # Start timer
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(scrape_house, url) for url in houses_links]
+        results = [item.result() for item in futures]
+        df = pd.DataFrame(results)
+    
+    end_time = time.time()  # Stop timer
+    execution_time = end_time - start_time
+
+    print("Scraping completed!")
+    print("Total time spent scraping:", execution_time, "seconds")
+    return df
+
+df = create_dataframe()

@@ -27,19 +27,13 @@ def thread_scraping():
     full_list_url = []
     num_pages = 333
 
-    # Create a list to store threads
-    threads = []
     start_time = time.time()  # Start timer
     print("Scraping URLs...")
 
-    # Create and start threads
-    for i in range(1, num_pages + 1):
-        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
-        threads.append(t)
-        t.start()
-
-    # Wait for all threads to complete and then join
-    [t.join() for t in threads]
+    # Scrape the URLs
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(scrape_urls(i), i) for i in range(1, num_pages + 1)]
+        full_list_url = [item.result() for item in futures]
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time

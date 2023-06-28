@@ -43,7 +43,7 @@
 ==> script['property']['land']['surface']
 
 - Surface area of the plot of land
-????
+
 
 - Number of facades
 ==> script['property']['building']['facadeCount']

@@ -7,22 +7,6 @@ import time
 import pandas as pd
 import threading
 
-# Function to scrape URLs
-def scrape_urls(page_num):
-    base_url = f"https://www.immoweb.be/en/search/house/for-sale?countries=BE&page={page_num}&orderBy=relevance"
-    r = requests.get(base_url)
-    soup = BeautifulSoup(r.content, "html.parser")
-    
-    urls = []
-    for elem in soup.find_all("a", attrs={"class": "card__title-link"}):
-        urls.append(elem.get('href'))
-        
-    # Save URLs to file - full_list.txt (local storage)
-    with open("full_list.txt", "a") as f:
-        for url in urls:
-            f.write(url + '\n')
-    return urls
-
 def thread_scraping():
     full_list_url = []
     num_pages = 333
@@ -49,6 +33,24 @@ def thread_scraping():
     print("Total time:", execution_time, "seconds")
     return full_list_url
 
+# Function to scrape URLs
+def scrape_urls(page_num):
+    base_url = f"https://www.immoweb.be/en/search/house/for-sale?countries=BE&page={page_num}&orderBy=relevance"
+    r = requests.get(base_url)
+    soup = BeautifulSoup(r.content, "html.parser")
+    
+    urls = []
+    for elem in soup.find_all("a", attrs={"class": "card__title-link"}):
+        urls.append(elem.get('href'))
+        
+    # Save URLs to file - full_list.txt (local storage)
+    # !!!! OPTIMIZE - Write immediately after appending into list
+    with open("full_list.txt", "a") as f:
+        for url in urls:
+            f.write(url + '\n')
+    return urls
+
+
 def scrape_house(url):
     """Scrapes all the info from a house listing"""
 
@@ -67,7 +69,7 @@ def scrape_house(url):
         return {}
 
     final_dictionary = {}
-        #Locality
+    #Locality
     try:
         final_dictionary['locality'] = script['property']['location']['locality']
     except:
@@ -164,20 +166,24 @@ def scrape_house(url):
 # CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
 def create_dataframe():
     houses_links = []
-    with open("full_list_20k.txt", "r") as f:
-        count = 0
-        for i in f:
-            if count < 300:
-                houses_links.append(i)
-                print(houses_links[count])
-                count+=1
-            else:
-                break
+    with open("./full_list_20k.txt", "r") as f:
+        # count = 0
+        for url in f:
+            #if count < 300:
+            houses_links.append(url)
+            # count +=1
+            # else:
+            #     break
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(scrape_house, url) for url in houses_links]
-        results =  [item.result() for item in futures]
-        df = pd.DataFrame(results)
-    print(df)
+        try:
+            futures = [executor.submit(scrape_house, url) for url in houses_links]
+            results =  [item.result() for item in futures]
+            df = pd.DataFrame(results)
+        except:
+            print("BREAK! Writing scraped records to csv")
+            df.to_csv('dataframe.csv', index = True)
+            return df
+    return df
 
 create_dataframe()

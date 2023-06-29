@@ -5,9 +5,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor, as_completed
 import time
 import pandas as pd
-import traceback
-import threading
 import sys
+import threading
 
 # Function to scrape URLs
 def scrape_urls(page_num):
@@ -27,11 +26,12 @@ def scrape_urls(page_num):
 
 def thread_scraping():
     full_list_url = []
-    num_pages = 333
+    num_pages = 50
 
     # Create a list to store threads
     threads = []
     start_time = time.time()  # Start timer
+    print("Scraping individual pages...")
     
     # Create and start threads
     for i in range(1, num_pages + 1):
@@ -46,8 +46,7 @@ def thread_scraping():
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
-
-    print("Scraping completed!")
+    print("Scraping completed!              ")
     print("Total URLs scraped:", len(full_list_url))
     print("Total time:", execution_time, "seconds")
     return full_list_url
@@ -57,16 +56,23 @@ def reporting(str, i):
     sys.stdout.flush()
     return
 
+def counter():
+    global counters 
+    if counters < 1: 
+        counters = 1
+    else:
+        counters +=1
+    return
+
 def scrape_house(url):
     """Scrapes all the info from a house listing"""
+
     # Get the house listing and make a soup
     try:
         house_page = requests.get(url)
-    except Exception:
-        traceback.print_exc()
-    
-    house_page = BeautifulSoup(house_page.text, 'html.parser')
-    final_dictionary = {}
+        house_page = BeautifulSoup(house_page.text, 'html.parser')
+    except: 
+        final_dictionary = {}
 
     # Get the hidden info from the java script
     regex = r"window.classified = (\{.*\})"
@@ -172,42 +178,60 @@ def scrape_house(url):
     return final_dictionary
 
 # CHANGE  THIS TO LOOP OVER ALL THE URLS IN URL LINKS LIST OR TXT FILE
-# CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available: houses_links = thread_scraping()
+# CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
 def create_dataframe():
-    #houses_links = thread_scraping()
-    print("Scraping of the URL links has finished")
-    print("")
-    houses_links = []    
-    with open("./full_list_20k.txt", "r") as f:
-          count = 0
-          for url in f:
-              if count < 3000:
-                  houses_links.append(url)
-                  count +=1
-              else:
-                  break
+    houses_links = []
+    houses_links = thread_scraping()
+    
+    """with open("./full_list_20k.txt", "r") as f:
+        count = 0
+        for url in f:
+            if count < 3000:
+                houses_links.append(url)
+                count +=1
+            else:
+                 break"""
 
+    print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
-
     with ThreadPoolExecutor(max_workers=10) as executor:
-        try:
-            futures = [(executor.submit(scrape_house, url), reporting("Individual page scraped:", url), time.sleep(.2)) for url in houses_links]            results =  [item.result() for item in futures]
-            df = pd.DataFrame(results)
-            
-        except:
+        #try:
+        futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual page scraped:", counters), time.sleep(.2)) for url in houses_links]
+        results =  [item.result() for item in futures]
+        df = pd.DataFrame(results)
+        """except Exception:
             print("BREAK! Writing scraped records to csv")
-            #  results =  [item.result() for item in futures]
-            #  df = pd.DataFrame(results)
+            df = pd.DataFrame(results)
             df.to_csv('dataframe.csv', index = True)
+            return df"""
     
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
 
-    print("Scraping completed!")
-    print("Total time spent scraping individual pages:", execution_time, "seconds")
-    df.to_csv('dataframe.csv', index = True)
-    print("Dataframe built!")
+    print("Scraping completed!                        ")
+    print("Total time spent scraping:", execution_time, "seconds")
+    return df
 
-create_dataframe()
+counters = 1
+df = create_dataframe()
+
+"""df.loc[df['kitchen'] == 'NOT_INSTALLED', 'kitchen'] = 0
+df.loc[df['kitchen'] == 'INSTALLED', 'kitchen'] = 1
+
+df.loc[df['furnished'] == None, 'furnished'] = 0
+df.loc[df['furnished'] == 'None', 'furnished'] = 0
+df.loc[df['furnished'] == False, 'furnished'] = 0
+df.loc[df['furnished'] == True, 'furnished'] = 1
+
+df.loc[df['fireplace'] == None, 'fireplace'] = 0
+df.loc[df['fireplace'] == 'None', 'fireplace'] = 0
+
+df.loc[df['terrace'] == False, 'terrace'] = 0
+df.loc[df['terrace'] == True, 'terrace'] = 1
+
+df.loc[df['terrace_area'] == 'NaN', 'terrace_area'] = 0"""
+
+print(df)
+
 

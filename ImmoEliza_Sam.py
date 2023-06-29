@@ -158,7 +158,18 @@ def scrape_house(url):
 # CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
 def create_dataframe():
     houses_links = []
-    houses_links = thread_scraping()
+    #houses_links = thread_scraping()
+    
+    houses_links = []
+    with open("./full_list_20k.txt", "r") as f:
+        # count = 0
+        for url in f:
+            #if count < 300:
+            houses_links.append(url)
+            # count +=1
+            # else:
+            #     break
+
     print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer

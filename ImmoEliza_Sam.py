@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor, as_comple
 import time
 import pandas as pd
 import sys
-import lxml
+import threading
 
 # Function to scrape URLs
 def scrape_urls(page_num):
@@ -26,27 +26,42 @@ def scrape_urls(page_num):
 
 def thread_scraping():
     full_list_url = []
-    num_pages = 333
+    num_pages = 50
 
+    # Create a list to store threads
+    threads = []
     start_time = time.time()  # Start timer
-    print("Scraping search pages...")
+    print("Scraping individual pages...")
+    
+    # Create and start threads
+    for i in range(1, num_pages + 1):
+        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+        reporting("Search pages scraped:", i)
+        threads.append(t)
+        t.start()
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [(executor.submit(scrape_urls(i), i), reporting("Search pages scraped:", i)) for i in range(1, num_pages)]
-        try:
-            full_list_url = [item.result() for item in futures]
-        except: Exception
+    # Wait for all threads to complete and then join
+    for t in threads:
+        t.join()
+
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
-
-    print("Scraping completed!")
-    print("Total search pages scraped:", len(full_list_url))
-    print("Total time spent scraping:", execution_time, "seconds")
+    print("Scraping completed!              ")
+    print("Total URLs scraped:", len(full_list_url))
+    print("Total time:", execution_time, "seconds")
     return full_list_url
 
 def reporting(str, i): 
     sys.stdout.write(str + ' %d\r' %i)
     sys.stdout.flush()
+    return
+
+def counter():
+    global counters 
+    if counters < 1: 
+        counters = 1
+    else:
+        counters +=1
     return
 
 def scrape_house(url):
@@ -180,28 +195,28 @@ def create_dataframe():
     print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
-
     with ThreadPoolExecutor(max_workers=10) as executor:
-        i = 1
-        try:
-            futures = [(executor.submit(scrape_house, url), reporting("Individual page scraped:", url), time.sleep(.2)) for url in houses_links]
-            results =  [item.result() for item in futures]
-            df = pd.DataFrame(results)
-        except:
+        #try:
+        futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual page scraped:", counters), time.sleep(.2)) for url in houses_links]
+        results =  [item.result() for item in futures]
+        df = pd.DataFrame(results)
+        """except Exception:
             print("BREAK! Writing scraped records to csv")
+            df = pd.DataFrame(results)
             df.to_csv('dataframe.csv', index = True)
-            return df
+            return df"""
     
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
 
-    print("Scraping completed!")
+    print("Scraping completed!                        ")
     print("Total time spent scraping:", execution_time, "seconds")
     return df
 
+counters = 1
 df = create_dataframe()
 
-df.loc[df['kitchen'] == 'NOT_INSTALLED', 'kitchen'] = 0
+"""df.loc[df['kitchen'] == 'NOT_INSTALLED', 'kitchen'] = 0
 df.loc[df['kitchen'] == 'INSTALLED', 'kitchen'] = 1
 
 df.loc[df['furnished'] == None, 'furnished'] = 0
@@ -215,7 +230,7 @@ df.loc[df['fireplace'] == 'None', 'fireplace'] = 0
 df.loc[df['terrace'] == False, 'terrace'] = 0
 df.loc[df['terrace'] == True, 'terrace'] = 1
 
-df.loc[df['terrace_area'] == 'NaN', 'terrace_area'] = 0
+df.loc[df['terrace_area'] == 'NaN', 'terrace_area'] = 0"""
 
 print(df)
 

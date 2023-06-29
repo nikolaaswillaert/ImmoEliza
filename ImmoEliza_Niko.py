@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import json
 from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor, as_completed
+import concurrent.futures
 import time
 import pandas as pd
 import traceback
@@ -34,13 +35,18 @@ def thread_scraping():
     
     # Create and start threads
     for i in range(1, num_pages + 1):
-        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
-        threads.append(t)
-        t.start()
+        try:
+            t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+            threads.append(t)
+            t.daemon = True
+            t.start()
+        except:
+            print("Exception encountered in the URL scraping")
+            pass
 
     # Wait for all threads to complete and then join
-    for t in threads:
-        t.join()
+    for thr in threads:
+        thr.join()
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
@@ -56,8 +62,13 @@ def scrape_house(url):
     try:
         house_page = requests.get(url)
     except Exception:
-        traceback.print_exc()
-    
+        while house_page.status_code != 200:
+            print("Error getting the GET request for the house URL")
+            print("URL: ", url)
+            print("Waiting for 5 seconds until next url request")
+            time.sleep(5)
+            house_page = requests.get(url)
+
     house_page = BeautifulSoup(house_page.text, 'html.parser')
     final_dictionary = {}
 
@@ -71,7 +82,7 @@ def scrape_house(url):
         return {}
 
     final_dictionary = {}
-        #Locality
+    #Locality
     try:
         final_dictionary['locality'] = script['property']['location']['locality']
     except:
@@ -96,7 +107,6 @@ def scrape_house(url):
         final_dictionary['number_rooms'] = script['property']['bedroomCount']
     except:
         final_dictionary['number_rooms'] = 'UNKNOWN'
-    
     # living area
     try:
         final_dictionary['living_area'] = script['property']['netHabitableSurface']
@@ -107,7 +117,6 @@ def scrape_house(url):
         final_dictionary['kitchen'] = script['property']['kitchen']['type']
     except:
         final_dictionary['kitchen'] = 0
-
     # NOT INSTALLED / INSTALLED 
     # Furnished (Yes/No)
     try:
@@ -119,7 +128,6 @@ def scrape_house(url):
         final_dictionary['fireplace'] = script['property']['fireplaceCount']
     except:
         final_dictionary['fireplace'] = 0
-
     # Terrace (Yes/No)
     try:
         final_dictionary['terrace'] = script['property']['hasTerrace']
@@ -167,17 +175,17 @@ def scrape_house(url):
 # CHANGE  THIS TO LOOP OVER ALL THE URLS IN URL LINKS LIST OR TXT FILE
 # CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available: houses_links = thread_scraping()
 def create_dataframe():
-    #houses_links = thread_scraping()
+    houses_links = thread_scraping()
     print("Scraping of the URL links has finished")
-    houses_links = []    
-    with open("./full_list_20k.txt", "r") as f:
-          count = 0
-          for url in f:
-              if count < 3000:
-                  houses_links.append(url)
-                  count +=1
-              else:
-                  break
+    # houses_links = []    
+    # with open("./full_list_20k.txt", "r") as f:
+    #       count = 0
+    #       for url in f:
+    #           if count < 20000:
+    #               houses_links.append(url)
+    #               count +=1
+    #           else:
+    #               break
 
     print("")
     print("Scraping individual pages...")
@@ -185,16 +193,13 @@ def create_dataframe():
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         try:
-            futures = [executor.submit(scrape_house, url) for url in houses_links if time.sleep(0.1) is None]
+            futures = [executor.submit(scrape_house, url) for url in houses_links]
             results =  [item.result() for item in futures]
             df = pd.DataFrame(results)
             
         except:
             print("BREAK! Writing scraped records to csv")
-            #  results =  [item.result() for item in futures]
-            #  df = pd.DataFrame(results)
-            df.to_csv('dataframe.csv', index = True)
-    
+            
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
 

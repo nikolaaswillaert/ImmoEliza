@@ -30,23 +30,20 @@ def thread_scraping():
     num_pages = 333
 
     # Create a list to store threads
+    start_time = time.time()  # Start timer
+    
     threads = []
     start_time = time.time()  # Start timer
     
     # Create and start threads
     for i in range(1, num_pages + 1):
-        try:
-            t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
-            threads.append(t)
-            t.daemon = True
-            t.start()
-        except:
-            print("Exception encountered in the URL scraping")
-            pass
+        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+        threads.append(t)
+        t.start()
 
     # Wait for all threads to complete and then join
-    for thr in threads:
-        thr.join()
+    for t in threads:
+        t.join()
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
@@ -59,16 +56,17 @@ def thread_scraping():
 def scrape_house(url):
     """Scrapes all the info from a house listing"""
     # Get the house listing and make a soup
+    failed_urls = []
     try:
         house_page = requests.get(url)
     except Exception:
-        while house_page.status_code != 200:
             print("Error getting the GET request for the house URL")
             print("URL: ", url)
+            failed_urls.append(url)
             print("Waiting for 5 seconds until next url request")
             time.sleep(5)
             house_page = requests.get(url)
-
+            
     house_page = BeautifulSoup(house_page.text, 'html.parser')
     final_dictionary = {}
 
@@ -181,7 +179,7 @@ def create_dataframe():
     # with open("./full_list_20k.txt", "r") as f:
     #       count = 0
     #       for url in f:
-    #           if count < 20000:
+    #           if count < 2000:
     #               houses_links.append(url)
     #               count +=1
     #           else:
@@ -189,24 +187,28 @@ def create_dataframe():
 
     print("")
     print("Scraping individual pages...")
-    start_time = time.time()  # Start timer
+    start_time = time.time()
+    # Start timer
+    results = []
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        try:
-            futures = [executor.submit(scrape_house, url) for url in houses_links]
-            results =  [item.result() for item in futures]
-            df = pd.DataFrame(results)
-            
-        except:
-            print("BREAK! Writing scraped records to csv")
-            
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Submit the scraping tasks to the executor
+        futures = [executor.submit(scrape_house, url) for url in houses_links]
+
+        # Retrieve the results as they become available
+        for future in concurrent.futures.as_completed(futures):
+            data = future.result()
+            results.append(data)
+
+    df = pd.DataFrame(results)
+
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
 
     print("Scraping completed!")
     print("Total time spent scraping:", execution_time, "seconds")
     df.to_csv('dataframe.csv', index = True)
-    print("Dataframe built!")
-
+      
+    
 create_dataframe()
 

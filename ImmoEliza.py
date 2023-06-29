@@ -26,7 +26,7 @@ def scrape_urls(page_num):
 
 def thread_scraping():
     full_list_url = []
-    num_pages = 50
+    num_pages = 2
 
     # Create a list to store threads
     threads = []
@@ -197,8 +197,8 @@ def create_dataframe():
     start_time = time.time()  # Start timer
     with ThreadPoolExecutor(max_workers=10) as executor:
         #try:
-        futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual page scraped:", counters), time.sleep(.2)) for url in houses_links]
-        results =  [item.result() for item in futures]
+        futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual pages scraped:", counters), time.sleep(.2)) for url in houses_links]
+        results =  [item[0].result() for item in futures]
         df = pd.DataFrame(results)
         """except Exception:
             print("BREAK! Writing scraped records to csv")

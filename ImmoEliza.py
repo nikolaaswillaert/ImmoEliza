@@ -7,6 +7,7 @@ import time
 import pandas as pd
 import traceback
 import threading
+import sys
 
 # Function to scrape URLs
 def scrape_urls(page_num):
@@ -35,6 +36,7 @@ def thread_scraping():
     # Create and start threads
     for i in range(1, num_pages + 1):
         t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+        reporting("Search pages scraped:", i)
         threads.append(t)
         t.start()
 
@@ -49,6 +51,11 @@ def thread_scraping():
     print("Total URLs scraped:", len(full_list_url))
     print("Total time:", execution_time, "seconds")
     return full_list_url
+
+def reporting(str, i): 
+    sys.stdout.write(str + ' %d\r' %i)
+    sys.stdout.flush()
+    return
 
 def scrape_house(url):
     """Scrapes all the info from a house listing"""
@@ -169,6 +176,7 @@ def scrape_house(url):
 def create_dataframe():
     #houses_links = thread_scraping()
     print("Scraping of the URL links has finished")
+    print("")
     houses_links = []    
     with open("./full_list_20k.txt", "r") as f:
           count = 0
@@ -179,14 +187,12 @@ def create_dataframe():
               else:
                   break
 
-    print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         try:
-            futures = [executor.submit(scrape_house, url) for url in houses_links if time.sleep(0.1) is None]
-            results =  [item.result() for item in futures]
+            futures = [(executor.submit(scrape_house, url), reporting("Individual page scraped:", url), time.sleep(.2)) for url in houses_links]            results =  [item.result() for item in futures]
             df = pd.DataFrame(results)
             
         except:
@@ -199,7 +205,7 @@ def create_dataframe():
     execution_time = end_time - start_time
 
     print("Scraping completed!")
-    print("Total time spent scraping:", execution_time, "seconds")
+    print("Total time spent scraping individual pages:", execution_time, "seconds")
     df.to_csv('dataframe.csv', index = True)
     print("Dataframe built!")
 

@@ -5,6 +5,8 @@ import json
 from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor, as_completed
 import time
 import pandas as pd
+import sys
+import lxml
 
 # Function to scrape URLs
 def scrape_urls(page_num):
@@ -26,30 +28,36 @@ def thread_scraping():
     full_list_url = []
     num_pages = 333
 
-    # Create a list to store threads
-    threads = []
     start_time = time.time()  # Start timer
-    print("Scraping URLs...")
+    print("Scraping search pages...")
 
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(scrape_urls(i), i) for i in range(1, num_pages + 1)]
-        full_list_url = [item.result() for item in futures]
-
+        futures = [(executor.submit(scrape_urls(i), i), reporting("Search pages scraped:", i)) for i in range(1, num_pages)]
+        try:
+            full_list_url = [item.result() for item in futures]
+        except: Exception
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
 
     print("Scraping completed!")
-    print("Total URLs scraped:", len(full_list_url))
+    print("Total search pages scraped:", len(full_list_url))
     print("Total time spent scraping:", execution_time, "seconds")
     return full_list_url
+
+def reporting(str, i): 
+    sys.stdout.write(str + ' %d\r' %i)
+    sys.stdout.flush()
+    return
 
 def scrape_house(url):
     """Scrapes all the info from a house listing"""
 
     # Get the house listing and make a soup
-    house_page = requests.get(url)
-    house_page = BeautifulSoup(house_page.text, 'html.parser')
-    final_dictionary = {}
+    try:
+        house_page = requests.get(url)
+        house_page = BeautifulSoup(house_page.text, 'html.parser')
+    except: 
+        final_dictionary = {}
 
     # Get the hidden info from the java script
     regex = r"window.classified = (\{.*\})"
@@ -158,25 +166,25 @@ def scrape_house(url):
 # CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
 def create_dataframe():
     houses_links = []
-    #houses_links = thread_scraping()
+    houses_links = thread_scraping()
     
-    houses_links = []
-    with open("./full_list_20k.txt", "r") as f:
-        # count = 0
+    """with open("./full_list_20k.txt", "r") as f:
+        count = 0
         for url in f:
-            #if count < 300:
-            houses_links.append(url)
-            # count +=1
-            # else:
-            #     break
+            if count < 3000:
+                houses_links.append(url)
+                count +=1
+            else:
+                 break"""
 
     print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
 
     with ThreadPoolExecutor(max_workers=10) as executor:
+        i = 1
         try:
-            futures = [executor.submit(scrape_house, url) for url in houses_links]
+            futures = [(executor.submit(scrape_house, url), reporting("Individual page scraped:", url), time.sleep(.2)) for url in houses_links]
             results =  [item.result() for item in futures]
             df = pd.DataFrame(results)
         except:

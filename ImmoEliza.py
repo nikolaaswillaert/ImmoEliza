@@ -27,7 +27,6 @@ def thread_scraping():
     num_pages = 333
 
     # Create a list to store threads
-    threads = []
     start_time = time.time()  # Start timer
     print("Scraping URLs...")
 
@@ -48,8 +47,8 @@ def scrape_house(url):
 
     # Get the house listing and make a soup
     house_page = requests.get(url)
+    
     house_page = BeautifulSoup(house_page.text, 'html.parser')
-    final_dictionary = {}
 
     # Get the hidden info from the java script
     regex = r"window.classified = (\{.*\})"
@@ -60,6 +59,8 @@ def scrape_house(url):
     except:
         return {}
 
+    # Add Keyerror message
+    #todo 
     final_dictionary = {}
         #Locality
     try:

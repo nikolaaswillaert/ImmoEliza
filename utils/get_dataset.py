@@ -103,14 +103,14 @@ def scrape_house(url):
         final_dictionary['locality'] = 'UNKNOWN'
     # Type of property
     try:
-        final_dictionary['type of property'] = script['property']['type']
+        final_dictionary['property_type'] = script['property']['type']
     except:
-        final_dictionary['type of property'] = 'UNKNOWN'
+        final_dictionary['property_type'] = 'UNKNOWN'
     # Subtype of property
     try:
-        final_dictionary['subtype of property'] = script['property']['subtype']
+        final_dictionary['property_subtype'] = script['property']['subtype']
     except:
-        final_dictionary['subtype of property'] = 'UNKNOWN'
+        final_dictionary['property_subtype'] = 'UNKNOWN'
     # Price
     try:
         final_dictionary['price'] = script['price']['mainValue']

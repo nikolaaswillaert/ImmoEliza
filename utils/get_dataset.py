@@ -14,7 +14,10 @@ def scrape_urls(page_num):
     """Scrapes a listing page for all the listing's URLs and writes the output to '.\data_output\full_list.txt'"""
     # Build the URL and make a soup
     base_url = f"https://www.immoweb.be/en/search/house/for-sale?countries=BE&page={page_num}&orderBy=relevance"
-    r = requests.get(base_url)
+    try:
+        r = requests.get(base_url)
+    except Exception:
+        pass
     soup = BeautifulSoup(r.content, "html.parser")
     
     # Look for all links on the page
@@ -36,11 +39,11 @@ def thread_scraping():
     # Create a list to store threads
     threads = []
     start_time = time.time()  # Start timer
-    print("Scraping individual pages...")
+    print("Scraping search pages...")
     
     # Remove output file if it exists so we have a clean dataset
-    if os.path.exists(r'.\data_output\full_list'): 
-        os.remove(r'.\data_output\full_list')
+    if os.path.exists(r'.\data_output\full_list.txt'): 
+        os.remove(r'.\data_output\full_list.txt')
 
     # Create and start threads
     for i in range(1, num_pages + 1):
@@ -48,7 +51,7 @@ def thread_scraping():
         reporting("Search pages scraped:", i)
         threads.append(t)
         t.start()
-
+        
     # Wait for all threads to complete and then join
     for t in threads:
         t.join()
@@ -190,22 +193,12 @@ def create_dataframe():
     houses_links = []
     houses_links = thread_scraping()
     
-    """with open("./full_list_20k.txt", "r") as f:
-        count = 0
-        for url in f:
-            if count < 3000:
-                houses_links.append(url)
-                count +=1
-            else:
-                 break"""
-
     print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
 
     # Scrape info from house pages concurrently
     with ThreadPoolExecutor(max_workers=10) as executor:
-        #try:
         futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual pages scraped:", counters), time.sleep(.2)) for url in houses_links]
         results =  [item[0].result() for item in futures]
         df = pd.DataFrame(results)

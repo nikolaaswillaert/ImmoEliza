@@ -1,52 +1,6 @@
 import pandas as pd
 import numpy as np
 
-def clean_dataset(df):
-    #REMOVE ALL THE EMPTY LINES
-    rows_to_remove = []
-    for index, row in df.iterrows():
-        if row.isnull().all():
-            rows_to_remove.append(index)
-
-    df = df.drop(rows_to_remove)
-    
-    # Locality
-    # !!! CONVERT THE CITIES INTO COORDINATES
-
-    # Type of property (House/apartment)
-    
-    # Subtype of property (Bungalow, Chalet, Mansion, ...)
-
-    # Price
-
-    # Type of sale (Exclusion of life sales
-
-    # Open fire (Yes/No)
-
-    # Number of rooms
-
-    # Living Area
-
-    # Fully equipped kitchen (Yes/No)
-
-    # Furnished (Yes/No)
-
-    # Terrace (Yes/No)
-    # If yes: Area
-
-    # Garden (Yes/No)
-    # If yes: Area
-
-    # Surface of the land
-
-    # Surface area of the plot of land
-
-    # Number of facades
-
-    # Swimming pool (Yes/No)
-
-    # State of the building (New, to be renovated, ...)
-
 def analyze_column(df, column_name):
     column = df[column_name]
     num_nan = column.isnull().sum()
@@ -60,5 +14,80 @@ def analyze_column(df, column_name):
     print(f"Percentage of NaN values: {percentage_nan:.2f}%")
     print(f"Percentage of unique values: {percentage_unique:.2f}%")
     print(f"Unique values: {unique_values}")
+
+
+def clean_dataset(df):
+    #REMOVE ALL THE EMPTY LINES
+    rows_to_remove = []
+    for index, row in df.iterrows():
+        if row.isnull().all():
+            rows_to_remove.append(index)
+
+    df_clean = df.drop(rows_to_remove)
+    
+    # Locality
+    # !!! CONVERT THE CITIES INTO COORDINATES
+
+    # Type of property (House/apartment)
+    # Apartment group and House group == NO PRICE
+
+    # Subtype of property (Bungalow, Chalet, Mansion, ...)
+
+    # Price
+
+    # Type of sale (Exclusion of life sales
+
+    # Open fire (Yes/No)
+    df_clean['fireplace'] = df_clean['fireplace'].replace(-1, 0)
+    df_clean['fireplace'] = df_clean['fireplace'].astype(int)
+
+    # NUMBER OF ROOMS (nan values set to 0)
+    # NUMBER OF ROOMS (nan values set to 0)
+    df_clean['number_rooms'] = df_clean['number_rooms'].replace('nan', np.nan).fillna(0)
+    analyze_column(df_clean, 'number_rooms')
+    
+    # Living Area
+    df_clean['living_area'] = df_clean['living_area'].replace('nan', np.nan).fillna(df_clean['living_area'].mean())
+    analyze_column(df, 'living_area')
+
+    # Fully equipped kitchen (Yes/No)
+    df_clean['kitchen'] = df_clean['kitchen'].replace('0', 'NOT_INSTALLED')
+    df_clean['kitchen'] = df_clean['kitchen'].replace(np.nan, 'NOT_INSTALLED')
+
+    # Furnished (Yes/No)
+    df_clean['furnished'] = df_clean['furnished'].replace(np.nan, False)
+    df_clean['furnished'] = df_clean['furnished'].replace(False, 0)
+    df_clean['furnished'] = df_clean['furnished'].replace(True, 1)
+
+    # Terrace (Yes/No)
+    df_clean['terrace'] = df_clean['terrace'].fillna(0)
+    df_clean['terrace'] = df_clean['terrace'].replace(True, 1)
+    # If yes: Area
+    df_clean['terrace_area'] = df_clean['terrace_area'].replace(np.nan, 0)
+    # Garden (Yes/No)
+    df_clean['garden'] = df_clean['garden'].fillna(False)
+    df_clean['garden'] = df_clean['garden'].replace(True, 1)
+    df_clean['garden'] = df_clean['garden'].replace(False, 0)
+    # If yes: Area
+    df_clean['garden_area'] = df_clean['garden_area'].fillna(0)
+
+    # Surface of the land
+    # !! TO DO!!!
+
+    # Surface area of the plot of land
+    #  !! TO CHECK !!
+    
+    # Number of facades
+    df_clean['number_facades'] = df_clean['number_facades'].replace(np.nan, '1')
+    df_clean['number_facades'] = df_clean['number_facades'].replace('UNKNOWN', '1')
+    df_clean['number_facades'] = df_clean['number_facades'].astype(int)
+
+    # Swimming pool (Yes/No)
+    df_clean['swimming_pool'] = df_clean['swimming_pool'].replace(np.nan, 0)
+    df_clean['swimming_pool'] = df_clean['swimming_pool'].replace(True, 1)
+    df_clean['swimming_pool'] = df_clean['swimming_pool'].replace(False, 0)
+
+    # State of the building (New, to be renovated, ...)
+    df_clean['building_state'] = df_clean['building_state'].replace("UNKNOWN", np.nan)
 
 

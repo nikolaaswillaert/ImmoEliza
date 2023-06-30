@@ -36,22 +36,26 @@ def thread_scraping():
     # Create a list to store threads
     threads = []
     start_time = time.time()  # Start timer
-    print("Scraping individual pages...")
+    print("Scraping search pages...")
     
     # Remove output file if it exists so we have a clean dataset
-    if os.path.exists(r'.\data_output\full_list'): 
-        os.remove(r'.\data_output\full_list')
+    if os.path.exists(r'.\data_output\full_list.txt'): 
+        os.remove(r'.\data_output\full_list.txt')
 
     # Create and start threads
     for i in range(1, num_pages + 1):
-        t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
-        reporting("Search pages scraped:", i)
+        try:
+            t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
+            reporting("Search pages scraped:", i)
+        except Exception:
+            pass
         threads.append(t)
         t.start()
-
-    # Wait for all threads to complete and then join
-    for t in threads:
-        t.join()
+        
+            # Wait for all threads to complete and then join
+        for t in threads:
+            t.join()
+        
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time

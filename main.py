@@ -1,3 +1,6 @@
-import utils.get_dataset as modules
+import utils.get_dataset as getdata
+import utils.clean_dataset as cleandata
 
-modules.create_dataframe()
+dataset = getdata.create_dataframe()
+
+#cleandata.clean_dataset(dataset)

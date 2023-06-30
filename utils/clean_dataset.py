@@ -15,7 +15,6 @@ def analyze_column(df, column_name):
     print(f"Percentage of unique values: {percentage_unique:.2f}%")
     print(f"Unique values: {unique_values}")
 
-
 def clean_dataset(df):
     #REMOVE ALL THE EMPTY LINES
     rows_to_remove = []
@@ -24,7 +23,8 @@ def clean_dataset(df):
             rows_to_remove.append(index)
 
     df_clean = df.drop(rows_to_remove)
-    
+
+    df_clean = df_clean.drop_duplicates()
     # Locality
     # !!! CONVERT THE CITIES INTO COORDINATES
 
@@ -39,6 +39,7 @@ def clean_dataset(df):
 
     # Open fire (Yes/No)
     df_clean['fireplace'] = df_clean['fireplace'].replace(-1, 0)
+    df_clean['fireplace'] = df_clean['fireplace'].replace(np.nan, 0)
     df_clean['fireplace'] = df_clean['fireplace'].astype(int)
 
     # NUMBER OF ROOMS (nan values set to 0)
@@ -75,7 +76,7 @@ def clean_dataset(df):
     # !! TO DO!!!
 
     # Surface area of the plot of land
-    #  !! TO CHECK !!
+    #  !! TO DO !!
     
     # Number of facades
     df_clean['number_facades'] = df_clean['number_facades'].replace(np.nan, '1')
@@ -90,4 +91,4 @@ def clean_dataset(df):
     # State of the building (New, to be renovated, ...)
     df_clean['building_state'] = df_clean['building_state'].replace("UNKNOWN", np.nan)
 
-
+    return df_clean

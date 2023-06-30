@@ -21,10 +21,11 @@ def clean_dataset(df):
     for index, row in df.iterrows():
         if row.isnull().all():
             rows_to_remove.append(index)
-
+    # dropping empty rows
     df_clean = df.drop(rows_to_remove)
-
+    # dropping duplicates (if any)
     df_clean = df_clean.drop_duplicates()
+
     # Locality
     # !!! CONVERT THE CITIES INTO COORDINATES
 

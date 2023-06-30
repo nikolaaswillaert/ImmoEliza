@@ -7,13 +7,17 @@ import time
 import pandas as pd
 import sys
 import threading
+import os
 
 # Function to scrape URLs
 def scrape_urls(page_num):
+    """Scrapes a listing page for all the listing's URLs and writes the output to '.\data_output\full_list.txt'"""
+    # Build the URL and make a soup
     base_url = f"https://www.immoweb.be/en/search/house/for-sale?countries=BE&page={page_num}&orderBy=relevance"
     r = requests.get(base_url)
     soup = BeautifulSoup(r.content, "html.parser")
     
+    # Look for all links on the page
     urls = []
     for elem in soup.find_all("a", attrs={"class": "card__title-link"}):
         urls.append(elem.get('href'))
@@ -25,14 +29,19 @@ def scrape_urls(page_num):
     return urls
 
 def thread_scraping():
+    """Uses threading to get all listing URLs concurrently"""
     full_list_url = []
-    num_pages = 2
+    num_pages = 333
 
     # Create a list to store threads
     threads = []
     start_time = time.time()  # Start timer
     print("Scraping individual pages...")
     
+    # Remove output file if it exists so we have a clean dataset
+    if os.path.exists(r'.\data_output\full_list'): 
+        os.remove(r'.\data_output\full_list')
+
     # Create and start threads
     for i in range(1, num_pages + 1):
         t = threading.Thread(target=lambda: full_list_url.extend(scrape_urls(i)))
@@ -52,11 +61,13 @@ def thread_scraping():
     return full_list_url
 
 def reporting(str, i): 
+    """Reports on scraping progress"""
     sys.stdout.write(str + ' %d\r' %i)
     sys.stdout.flush()
     return
 
 def counter():
+    """Creates a global counter for use in list comprehension"""
     global counters 
     if counters < 1: 
         counters = 1
@@ -71,11 +82,12 @@ def scrape_house(url):
     try:
         house_page = requests.get(url)
         house_page = BeautifulSoup(house_page.text, 'html.parser')
+    # Return an enmpty dictionary if we can't parse the URL
     except: 
         final_dictionary = {}
 
     # Get the hidden info from the java script
-    regex = r"window.classified = (\{.*\})"
+    regex = r"window.classified = (\{.*\})" # Only captures what's between brackets
     script = house_page.find('div',attrs={"id":"main-container"}).script.text
     script = re.findall(regex, script)
     try:
@@ -84,33 +96,32 @@ def scrape_house(url):
         return {}
 
     final_dictionary = {}
-        #Locality
+    # Locality
     try:
         final_dictionary['locality'] = script['property']['location']['locality']
     except:
         final_dictionary['locality'] = 'UNKNOWN'
-    #type of property
+    # Type of property
     try:
         final_dictionary['type of property'] = script['property']['type']
     except:
         final_dictionary['type of property'] = 'UNKNOWN'
-    #subtype of property
+    # Subtype of property
     try:
         final_dictionary['subtype of property'] = script['property']['subtype']
     except:
         final_dictionary['subtype of property'] = 'UNKNOWN'
-    #price
+    # Price
     try:
         final_dictionary['price'] = script['price']['mainValue']
     except:
         final_dictionary['price'] = 'UNKNOWN'
-    #- Number of rooms
+    # Number of rooms
     try:
         final_dictionary['number_rooms'] = script['property']['bedroomCount']
     except:
         final_dictionary['number_rooms'] = 'UNKNOWN'
-    
-    # living area
+    # Living area
     try:
         final_dictionary['living_area'] = script['property']['netHabitableSurface']
     except:
@@ -120,8 +131,6 @@ def scrape_house(url):
         final_dictionary['kitchen'] = script['property']['kitchen']['type']
     except:
         final_dictionary['kitchen'] = 0
-
-    # NOT INSTALLED / INSTALLED 
     # Furnished (Yes/No)
     try:
         final_dictionary['furnished'] = script['transaction']['sale']['isFurnished']
@@ -132,7 +141,6 @@ def scrape_house(url):
         final_dictionary['fireplace'] = script['property']['fireplaceCount']
     except:
         final_dictionary['fireplace'] = 0
-
     # Terrace (Yes/No)
     try:
         final_dictionary['terrace'] = script['property']['hasTerrace']
@@ -148,7 +156,7 @@ def scrape_house(url):
         final_dictionary['garden'] = script['property']['hasGarden']
     except:
         final_dictionary['garden'] = 0
-    #- If yes: Area
+    # If yes: Area
     try:
         final_dictionary['garden_area'] = script['property']['gardenSurface']
     except:
@@ -158,7 +166,6 @@ def scrape_house(url):
         final_dictionary['surface_land'] = script['property']['land']['surface']
     except:
         final_dictionary['surface_land'] = "UNKNOWN"
-    # Surface area of the plot of land - TO ASK
     # Number of facades
     try:
         final_dictionary['number_facades'] = script['property']['building']['facadeCount']
@@ -177,9 +184,9 @@ def scrape_house(url):
 
     return final_dictionary
 
-# CHANGE  THIS TO LOOP OVER ALL THE URLS IN URL LINKS LIST OR TXT FILE
-# CALL THIS FUNCTION IF NOT FULL_LIST_20k.txt available houses_links = thread_scraping()
 def create_dataframe():
+    """Will scrape info from house pages and create a pandas DataFrame from the info we scrape"""
+    # Initialize list and fetch all URLs
     houses_links = []
     houses_links = thread_scraping()
     
@@ -195,12 +202,15 @@ def create_dataframe():
     print("")
     print("Scraping individual pages...")
     start_time = time.time()  # Start timer
+
+    # Scrape info from house pages concurrently
     with ThreadPoolExecutor(max_workers=10) as executor:
         #try:
         futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual pages scraped:", counters), time.sleep(.2)) for url in houses_links]
         results =  [item[0].result() for item in futures]
         df = pd.DataFrame(results)
     
+    # Export our dataset to a csv"
     df.to_csv(r'.\data_output\dataframe.csv', index = True)
 
     end_time = time.time()  # Stop timer
@@ -210,6 +220,7 @@ def create_dataframe():
     print("Total time spent scraping:", execution_time, "seconds")
     return df
 
+# Initialize counter for the counter function
 counters = 1
 
 

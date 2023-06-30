@@ -214,24 +214,5 @@ def create_dataframe():
     return df
 
 counters = 1
-df = create_dataframe()
-
-"""df.loc[df['kitchen'] == 'NOT_INSTALLED', 'kitchen'] = 0
-df.loc[df['kitchen'] == 'INSTALLED', 'kitchen'] = 1
-
-df.loc[df['furnished'] == None, 'furnished'] = 0
-df.loc[df['furnished'] == 'None', 'furnished'] = 0
-df.loc[df['furnished'] == False, 'furnished'] = 0
-df.loc[df['furnished'] == True, 'furnished'] = 1
-
-df.loc[df['fireplace'] == None, 'fireplace'] = 0
-df.loc[df['fireplace'] == 'None', 'fireplace'] = 0
-
-df.loc[df['terrace'] == False, 'terrace'] = 0
-df.loc[df['terrace'] == True, 'terrace'] = 1
-
-df.loc[df['terrace_area'] == 'NaN', 'terrace_area'] = 0"""
-
-print(df)
 
 

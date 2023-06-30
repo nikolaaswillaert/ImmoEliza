@@ -167,7 +167,6 @@ def scrape_house(url):
         final_dictionary['building_state'] = script['property']['building']['condition']
     except:
         final_dictionary['building_state'] = 'UNKNOWN'
-
     return final_dictionary
 
 # CHANGE  THIS TO LOOP OVER ALL THE URLS IN URL LINKS LIST OR TXT FILE
@@ -208,8 +207,7 @@ def create_dataframe():
     print("Scraping completed!")
     print("Total time spent scraping:", execution_time, "seconds")
     df.to_csv('dataframe.csv', index = True)
-      
-    
+
 create_dataframe()
 
 

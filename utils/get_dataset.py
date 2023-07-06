@@ -8,6 +8,8 @@ import pandas as pd
 import sys
 import threading
 import os
+from pathlib import Path
+
 
 # Function to scrape URLs
 def scrape_urls(page_num):
@@ -26,7 +28,7 @@ def scrape_urls(page_num):
         urls.append(elem.get('href'))
         
     # Save URLs to file - full_list.txt (local storage)
-    with open(r".\data_output\full_list.txt", "a") as f:
+    with open(url_path, "a") as f:
         for url in urls:
             f.write(url + '\n')
     return urls
@@ -42,8 +44,8 @@ def thread_scraping():
     print("Scraping search pages...")
     
     # Remove output file if it exists so we have a clean dataset
-    if os.path.exists(r'.\data_output\full_list.txt'): 
-        os.remove(r'.\data_output\full_list.txt')
+    if os.path.exists(url_path): 
+        os.remove(url_path)
 
     # Create and start threads
     for i in range(1, num_pages + 1):
@@ -87,18 +89,33 @@ def scrape_house(url):
         house_page = BeautifulSoup(house_page.text, 'html.parser')
     # Return an enmpty dictionary if we can't parse the URL
     except: 
-        final_dictionary = {}
+        return {}
 
     # Get the hidden info from the java script
-    regex = r"window.classified = (\{.*\})" # Only captures what's between brackets
-    script = house_page.find('div',attrs={"id":"main-container"}).script.text
-    script = re.findall(regex, script)
     try:
+        regex = r"window.classified = (\{.*\})" # Only captures what's between brackets
+        script = house_page.find('div',attrs={"id":"main-container"}).script.text
+        script = re.findall(regex, script)
         script = json.loads(script[0])
     except:
         return {}
 
     final_dictionary = {}
+    # URL
+    try:
+        final_dictionary['url'] = url
+    except:
+        final_dictionary['url'] = 'UNKNOWN'
+    # Region
+    try:
+        final_dictionary['region'] = script['property']['location']['region']
+    except:
+        final_dictionary['region'] = 'UNKNOWN'
+    # Province
+    try:
+        final_dictionary['province'] = script['property']['location']['province']
+    except:
+        final_dictionary['province'] = 'UNKNOWN'
     # Locality
     try:
         final_dictionary['locality'] = script['property']['location']['locality']
@@ -198,13 +215,13 @@ def create_dataframe():
     start_time = time.time()  # Start timer
 
     # Scrape info from house pages concurrently
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=50) as executor:
         futures = [(executor.submit(scrape_house, url), counter(), reporting("Individual pages scraped:", counters), time.sleep(.2)) for url in houses_links]
         results =  [item[0].result() for item in futures]
         df = pd.DataFrame(results)
     
     # Export our dataset to a csv"
-    df.to_csv(r'.\data_output\dataframe.csv', index = True)
+    df.to_csv(csv_path, index = True)
 
     end_time = time.time()  # Stop timer
     execution_time = end_time - start_time
@@ -216,4 +233,10 @@ def create_dataframe():
 # Initialize counter for the counter function
 counters = 1
 
-
+# Build path to file
+# Selects current working directory
+cwd = Path.cwd()
+csv_path = 'data_output/dataframe.csv'
+url_path = 'data_output/full_list.txt'
+csv_path = (cwd / csv_path).resolve()
+url_path = (cwd / url_path).resolve()

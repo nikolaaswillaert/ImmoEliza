@@ -121,6 +121,11 @@ def scrape_house(url):
         final_dictionary['locality'] = script['property']['location']['locality']
     except:
         final_dictionary['locality'] = 'UNKNOWN'
+    # ZIP Code
+    try:
+        final_dictionary['zip_code'] = script['property']['location']['postalCode']
+    except:
+        final_dictionary['zip_code'] = 'UNKNOWN'
     # Type of property
     try:
         final_dictionary['property_type'] = script['property']['type']
